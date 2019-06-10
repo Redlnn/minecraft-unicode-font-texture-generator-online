@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="UTF-8">
-	<head>
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Minecraft UNICODE Font Texture Genterator Online</title>
-	</head>
-
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Minecraft UNICODE Font Texture Genterator Online</title>
 	<style>
 		html,
 		body {
@@ -82,7 +80,7 @@
 		#preview-canvas {
 			width: 256px;
 			height: 256px;
-			background: black;
+			background: #272822;
 			border: 16px solid #ddd;
 		}
 
@@ -205,7 +203,8 @@
 			color: white;
 		}
 	</style>
-
+</head>
+<body>
 	<div class="root">
 		<div class="header">Minecraft UNICODE Font Texture Genterator Online</div>
 		<div class="content">
@@ -257,7 +256,7 @@
 									<input name="metamode" type="radio" value="pc" checked/>PC
 								</label>
 								<label>
-									<input name="metamode" type="radio" value="pe" />PE
+									<input name="metamode" type="radio" value="pe" onclick="change_pack_format()"/>PE
 								</label>
 							</div>
 						</div>
@@ -266,7 +265,7 @@
 								pack_format:
 							</div>
 							<div class="input">
-								<input name="pack_format" type="number" value="1" min="1" />
+								<input id="pack_format" name="pack_format" type="number" value="1" min="1" />
 							</div>
 						</div>
 						<div class="description_format">
@@ -287,148 +286,153 @@
 			</div>
 		</div>
 	</div>
-	<script src="./sprintf.js">	</script>
-	<script src="./jszip.min.js"></script>
-	<script src="./FileSaver.min.js"></script>
-	<script>
-		(function () {
-			"use strict";
-			const preview_canvas = document.querySelector("#preview-canvas");
-			const preview_info = document.querySelector(".preview-info");
-			const gen_btn = document.querySelector("#gen_btn");
-			const reset_btn = document.querySelector("#reset_btn");
-			const form = document.forms[0];
-			const stripDataurl = dataurl => dataurl.substr(dataurl.indexOf(',') + 1);
-			const updateProgress = ch => preview_info.innerText = sprintf("Process %02x (%5.2f%%)", ch, ch / 0xFF * 100);
+</body>
+<script src="./js/sprintf.js">	</script>
+<script src="./js/jszip.min.js"></script>
+<script src="./js/FileSaver.min.js"></script>
+<script src="./js/jquery-3.4.1.min.js"></script>
+<script>
+	function change_pack_format() {
+			$("#pack_format").val(1);
+	}
+	(function () {
+		"use strict";
+		const preview_canvas = document.querySelector("#preview-canvas");
+		const preview_info = document.querySelector(".preview-info");
+		const gen_btn = document.querySelector("#gen_btn");
+		const reset_btn = document.querySelector("#reset_btn");
+		const form = document.forms[0];
+		const stripDataurl = dataurl => dataurl.substr(dataurl.indexOf(',') + 1);
+		const updateProgress = ch => preview_info.innerText = sprintf("Process %02x (%5.2f%%)", ch, ch / 0xFF * 100);
+		const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+			var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+			return v.toString(16);
+		});
 
-			const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-				var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-				return v.toString(16);
-			});
-
-			const lock = (() => {
-				let startStatus = false;
-				let stopStatus = false;
-				return {
-					init() {
-						if (startStatus) {
-							stopStatus = true;
-							return true;
-						}
-						startStatus = true;
-						stopStatus = false;
-						preview_info.innerText = "Starting...";
-						gen_btn.innerText = "Stop!";
-						return false;
-					},
-					stop() {
-						startStatus = false;
-						preview_info.innerText = "Ready.";
-						gen_btn.innerText = "Generate!";
-					},
-					sholdAbort() {
-						if (stopStatus) {
-							lock.stop();
-							return true;
-						}
-						return false;
+		const lock = (() => {
+			let startStatus = false;
+			let stopStatus = false;
+			return {
+				init() {
+					if (startStatus) {
+						stopStatus = true;
+						return true;
 					}
+					startStatus = true;
+					stopStatus = false;
+					preview_info.innerText = "Starting...";
+					gen_btn.innerText = "Stop!";
+					return false;
+				},
+				stop() {
+					startStatus = false;
+					preview_info.innerText = "Ready.";
+					gen_btn.innerText = "Generate!";
+				},
+				sholdAbort() {
+					if (stopStatus) {
+						lock.stop();
+						return true;
+					}
+					return false;
 				}
-			})();
+			}
+		})();
 
-			const getRadio = radios => Array.from(radios).find(r => r.checked).value;
+		const getRadio = radios => Array.from(radios).find(r => r.checked).value;
 
-			gen_btn.addEventListener("click", () => {
-				if (lock.init()) return;
-				const zip = new JSZip();
-				const ctx = preview_canvas.getContext('2d');
-				const glyph_sizes = new Uint8Array(64 * 1024);
-				const yoffset = parseInt(form.elements.yoffset.value);
-				const fontsize = form.elements.fontsize.value;
-				const fontname = form.elements.fontname.value;
-				const gridsize = form.elements.gridsize.value;
-				const metamode = form.elements.metamode.value || getRadio(form.elements.metamode);
-				const pack_format = parseInt(form.elements.pack_format.value);
-				const description_format = form.elements.description_format.value;
-				let formatstring, glyph_sizes_bin
+		gen_btn.addEventListener("click", () => {
+			if (lock.init()) return;
+			const zip = new JSZip();
+			const ctx = preview_canvas.getContext('2d');
+			const glyph_sizes = new Uint8Array(64 * 1024);
+			const yoffset = parseInt(form.elements.yoffset.value);
+			const fontsize = form.elements.fontsize.value;
+			const fontname = form.elements.fontname.value;
+			const gridsize = form.elements.gridsize.value;
+			const metamode = form.elements.metamode.value || getRadio(form.elements.metamode);
+			const pack_format = parseInt(form.elements.pack_format.value);
+			const description_format = form.elements.description_format.value;
+			let formatstring, glyph_sizes_bin
 
+			switch (metamode) {
+				case 'pc':
+				formatstring = 'assets/minecraft/textures/font/unicode_page_%02x.png'
+					glyph_sizes_bin = 'assets/minecraft/font/glyph_sizes.bin'
+					break;
+				case 'pe':
+					formatstring = 'font/glyph_%02X.png'
+					break;
+			}
+
+			preview_canvas.width = gridsize * 16;
+			preview_canvas.height = gridsize * 16;
+			ctx.fillStyle = "white";
+			ctx.font = sprintf("%dpx %s", fontsize, fontname);
+			ctx.textBaseline = "top";
+
+			const drawCharAt = (size, ch, x, y) => {
+				ctx.clearRect(x, y, size, size);
+				ctx.fillText(ch, x, y + yoffset);
+				return (n => n > 0xF ? 0xF : n)(ctx.measureText(ch).width / size * 0xF);
+			};
+			const drawPage = (start, grid) => {
+				for (let i = 0; i < 16; i++)
+						for (let j = 0; j < 16; j++)
+						glyph_sizes[(start << 8) + i * 16 + j] = drawCharAt(grid, String.fromCharCode((start << 8) + i * 16 + j), j * grid, i * grid);
+			};
+			const draw = current => {
+				if (lock.sholdAbort()) return ctx.clearRect(0, 0, preview_canvas.width, preview_canvas.height);
+				if (metamode == 'pe' && (current == 0xe0 || current == 0xe1)) return setTimeout(() => draw(current + 1), 10);
+				updateProgress(current);
+				ctx.clearRect(0, 0, preview_canvas.width, preview_canvas.height);
+				drawPage(current, gridsize);
+				zip.file(sprintf(formatstring, current), stripDataurl(preview_canvas.toDataURL("image/png")), { createFolders: true, base64: true });
+				if (current == 0xff) return finish();
+				setTimeout(() => draw(current + 1), 10);
+			};
+			draw(0);
+			const finish = () => {
+				if (glyph_sizes_bin) {
+					preview_info.innerText = "storing glyph_sizes.bin";
+					zip.file(glyph_sizes_bin, glyph_sizes, { binary: true, createFolders: true });
+				}
 				switch (metamode) {
 					case 'pc':
-					formatstring = 'assets/minecraft/textures/font/unicode_page_%02x.png'
-						glyph_sizes_bin = 'assets/minecraft/font/glyph_sizes.bin'
+						preview_info.innerText = "creating metafile";
+						zip.file("pack.mcmeta", JSON.stringify({ pack: { pack_format, description: sprintf(description_format, fontname, gridsize, fontsize) } }, null, '\t'));
 						break;
 					case 'pe':
-						formatstring = 'font/glyph_%02X.png'
-						break;
+						preview_info.innerText = "creating metafile";
+						zip.file("manifest.json", JSON.stringify({
+							format_version: pack_format,
+							header: {
+								uuid: uuidv4(),
+								name: sprintf("%s x%d(%d)", fontname, gridsize, fontsize),
+								version: [0, 0, 1],
+								description: sprintf(description_format, fontname, gridsize, fontsize)
+							},
+							modules: [{
+								description: sprintf(description_format, fontname, gridsize, fontsize),
+								version: [0, 0, 1],
+								uuid: uuidv4(),
+								type: "resources"
+							}]
+						}, null, '\t'));
 				}
+				preview_info.innerText = "finish...generating zip file...."
+				zip.generateAsync({ type: "blob" }).then(content => {
+					saveAs(content, sprintf("%s x%d(%d) %s.%s", fontname, gridsize, fontsize, metamode, metamode == 'pc' ? 'zip' : 'mcpack'));
+					lock.stop();
+				});
+				ctx.clearRect(0, 0, preview_canvas.width, preview_canvas.height);
+			};
+		});
+		reset_btn.addEventListener("click", () => {
+			form.reset();
+		});
 
-				preview_canvas.width = gridsize * 16;
-				preview_canvas.height = gridsize * 16;
-				ctx.fillStyle = "white";
-				ctx.font = sprintf("%dpx %s", fontsize, fontname);
-				ctx.textBaseline = "top";
-
-				const drawCharAt = (size, ch, x, y) => {
-					ctx.clearRect(x, y, size, size);
-					ctx.fillText(ch, x, y + yoffset);
-					return (n => n > 0xF ? 0xF : n)(ctx.measureText(ch).width / size * 0xF);
-				};
-				const drawPage = (start, grid) => {
-					for (let i = 0; i < 16; i++)
-						for (let j = 0; j < 16; j++)
-							glyph_sizes[(start << 8) + i * 16 + j] = drawCharAt(grid, String.fromCharCode((start << 8) + i * 16 + j), j * grid, i * grid);
-				};
-				const draw = current => {
-					if (lock.sholdAbort()) return ctx.clearRect(0, 0, preview_canvas.width, preview_canvas.height);
-					if (metamode == 'pe' && (current == 0xe0 || current == 0xe1)) return setTimeout(() => draw(current + 1), 10);
-					updateProgress(current);
-					ctx.clearRect(0, 0, preview_canvas.width, preview_canvas.height);
-					drawPage(current, gridsize);
-					zip.file(sprintf(formatstring, current), stripDataurl(preview_canvas.toDataURL("image/png")), { createFolders: true, base64: true });
-					if (current == 0xff) return finish();
-					setTimeout(() => draw(current + 1), 10);
-				};
-				draw(0);
-				const finish = () => {
-					if (glyph_sizes_bin) {
-						preview_info.innerText = "storing glyph_sizes.bin";
-						zip.file(glyph_sizes_bin, glyph_sizes, { binary: true, createFolders: true });
-					}
-					switch (metamode) {
-						case 'pc':
-							preview_info.innerText = "creating metafile";
-							zip.file("pack.mcmeta", JSON.stringify({ pack: { pack_format, description: sprintf(description_format, fontname, gridsize, fontsize) } }, null, '\t'));
-							break;
-						case 'pe':
-							preview_info.innerText = "creating metafile";
-							zip.file("manifest.json", JSON.stringify({
-								format_version: pack_format,
-								header: {
-									uuid: uuidv4(),
-									name: sprintf("%s x%d(%d)", fontname, gridsize, fontsize),
-									version: [0, 0, 1],
-									description: sprintf(description_format, fontname, gridsize, fontsize)
-								},
-								modules: [{
-									description: sprintf(description_format, fontname, gridsize, fontsize),
-									version: [0, 0, 1],
-									uuid: uuidv4(),
-									type: "resources"
-								}]
-							}, null, '\t'));
-					}
-					preview_info.innerText = "finish...generating zip file...."
-					zip.generateAsync({ type: "blob" }).then(content => {
-						saveAs(content, sprintf("%s x%d(%d) %s.%s", fontname, gridsize, fontsize, metamode, metamode == 'pc' ? 'zip' : 'mcpack'));
-						lock.stop();
-					});
-				};
-			});
-			reset_btn.addEventListener("click", () => {
-				form.reset();
-			});
-
-			preview_info.innerText = "Ready."
-		})();
-	</script>
+		preview_info.innerText = "Ready."
+	})();
+</script>
 </html>
