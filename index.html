@@ -253,7 +253,7 @@
 							</div>
 							<div class="input">
 								<label>
-									<input name="metamode" type="radio" value="pc" checked/>PC
+									<input name="metamode" type="radio" value="pc" onclick="change_pack_format()" checked/>PC
 								</label>
 								<label>
 									<input name="metamode" type="radio" value="pe" onclick="change_pack_format()"/>PE
@@ -287,14 +287,22 @@
 		</div>
 	</div>
 </body>
-<script src="./sprintf.js">	</script>
+<script src="./sprintf.js"></script>
 <script src="./jszip.min.js"></script>
 <script src="./FileSaver.min.js"></script>
 <script src="./jquery-3.4.1.min.js"></script>
 <script>
 	function change_pack_format() {
+		const form = document.forms[0];
+		const metamode = form.elements.metamode.value || getRadio(form.elements.metamode);
+		if(metamode=="pe"){
+			$("#pack_format").attr("readOnly","true");
 			$("#pack_format").val(1);
+		}else if(metamode=="pc"){
+			$("#pack_format").attr("readOnly",false);
+		}
 	}
+
 	(function () {
 		"use strict";
 		const preview_canvas = document.querySelector("#preview-canvas");
@@ -357,7 +365,7 @@
 
 			switch (metamode) {
 				case 'pc':
-				formatstring = 'assets/minecraft/textures/font/unicode_page_%02x.png'
+					formatstring = 'assets/minecraft/textures/font/unicode_page_%02x.png'
 					glyph_sizes_bin = 'assets/minecraft/font/glyph_sizes.bin'
 					break;
 				case 'pe':
@@ -378,7 +386,7 @@
 			};
 			const drawPage = (start, grid) => {
 				for (let i = 0; i < 16; i++)
-						for (let j = 0; j < 16; j++)
+					for (let j = 0; j < 16; j++)
 						glyph_sizes[(start << 8) + i * 16 + j] = drawCharAt(grid, String.fromCharCode((start << 8) + i * 16 + j), j * grid, i * grid);
 			};
 			const draw = current => {
